@@ -4,11 +4,17 @@
 
 ## Flags Available
 `-c`, `--bytes` print the byte count
+
 `-m`, `--chars` print the character count
+
 `-l`, `--lines` print the line count
+
 `-w`, `--words` print the word count
+
 `--help` display options
+
 `--version` display version
+
 
 ## To Do
 
