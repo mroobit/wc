@@ -7,6 +7,7 @@ import (
 )
 
 var (
+	command string
 	options = struct {
 		Bytes   bool
 		Chars   bool
@@ -32,12 +33,14 @@ var (
 		"--lines":   "Lines",
 		"-w":        "Words",
 		"--words":   "Words",
+		"-h":        "Help",
 		"--help":    "Help",
 		"--version": "Version",
 	}
 )
 
 func main() {
+	command = os.Args[0]
 
 	flags := make([]string, 0)
 	files := make([]*File, 0)
@@ -90,12 +93,12 @@ func main() {
 	}
 
 	if options.Help {
-		Help()
+		Help(command)
 		return
 	}
 
 	if options.Version {
-		Version()
+		Version(command)
 		return
 	}
 
@@ -103,20 +106,19 @@ func main() {
 
 	for _, f := range files {
 
-		wholeFile, err := os.ReadFile(f.Name)
+		byteStream, err := os.ReadFile(f.Name)
 		if err != nil {
 			fmt.Println("Error reading in whole file: ", err)
 			return
 		}
 
-		f.Stream = wholeFile
-		f.Bytes = len(wholeFile)
+		f.Bytes = len(byteStream)
 
-		stringified := fmt.Sprintf("%s", wholeFile)
+		strFile := fmt.Sprintf("%s", byteStream)
 
-		f.Chars = len([]rune(stringified))
-		f.Words = len(strings.Fields(stringified))
-		f.Lines = len(strings.Split(stringified, "\n")) - 1
+		f.Chars = len([]rune(strFile))
+		f.Words = len(strings.Fields(strFile))
+		f.Lines = len(strings.Split(strFile, "\n")) - 1
 
 		if options.Lines {
 			fmt.Printf(" %d", f.Lines)
@@ -157,12 +159,11 @@ func main() {
 }
 
 type File struct {
-	Name   string
-	Stream []byte
-	Bytes  int
-	Words  int
-	Lines  int
-	Chars  int
+	Name  string
+	Bytes int
+	Words int
+	Lines int
+	Chars int
 }
 
 func NewFile(f string) *File {
@@ -172,12 +173,31 @@ func NewFile(f string) *File {
 	return file
 }
 
-func Help() {
-	fmt.Println("Display help text here")
+func Help(c string) {
+	byteStream, err := os.ReadFile("./help.txt")
+	if err != nil {
+		fmt.Println("Help file not found: ", err)
+		return
+	}
+
+	strFile := fmt.Sprintf("%s", byteStream)
+	strFile = strings.Replace(strFile, "commandName", c, -1)
+
+	fmt.Println(strFile)
 	return
 }
 
-func Version() {
-	fmt.Println("Display version number here")
+func Version(c string) {
+	c = strings.TrimLeft(c, "./")
+	byteStream, err := os.ReadFile("./version.txt")
+	if err != nil {
+		fmt.Println("Version information not found: ", err)
+		return
+	}
+
+	strFile := fmt.Sprintf("%s", byteStream)
+	strFile = strings.Replace(strFile, "commandName", c, -1)
+
+	fmt.Println(strFile)
 	return
 }

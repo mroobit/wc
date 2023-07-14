@@ -1,0 +1,6 @@
+commandName 1.0
+
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+Written by Shannon Dybvig, based on the Unix command line tool wc which was written by Paul Rubin and David MacKenzie.
