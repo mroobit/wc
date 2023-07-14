@@ -1,69 +1,183 @@
 package main
 
 import (
-	"bufio"
-	"flag"
 	"fmt"
 	"os"
 	"strings"
 )
 
+var (
+	options = struct {
+		Bytes   bool
+		Chars   bool
+		Words   bool
+		Lines   bool
+		Help    bool
+		Version bool
+	}{
+		Bytes:   false,
+		Chars:   false,
+		Words:   false,
+		Lines:   false,
+		Help:    false,
+		Version: false,
+	}
+
+	optionFlags = map[string]string{
+		"-c":        "Bytes",
+		"--bytes":   "Bytes",
+		"-m":        "Chars",
+		"--chars":   "Chars",
+		"-l":        "Lines",
+		"--lines":   "Lines",
+		"-w":        "Words",
+		"--words":   "Words",
+		"--help":    "Help",
+		"--version": "Version",
+	}
+)
+
 func main() {
 
-	// pull in specified file to read
-	// pull in flags, adjust behaviors based on flags
-	// ccwc -c should output number of bytes in a file
-	// so too should --bytes
+	flags := make([]string, 0)
+	files := make([]*File, 0)
 
-	filename := os.Args[len(os.Args)-1] // file to read
+	for i := range os.Args {
+		switch {
+		case os.Args[i][0] == '-':
+			if _, ok := optionFlags[os.Args[i]]; !ok {
+				// separate unrecognized flag into individual character flags
+				moreOpts := strings.Split(strings.TrimLeft(os.Args[i], "-"), "")
+				for _, o := range moreOpts {
+					o = "-" + o
+					flags = append(flags, o)
+				}
+			} else {
+				flags = append(flags, os.Args[i])
+			}
+		case i > 0:
+			nf := NewFile(os.Args[i])
+			files = append(files, nf)
+		}
+	}
 
-	bytesFlagA := flag.Bool("c", false, "print bytes count\t(boolean)")
-	//bytesFlagB := flag.Bool("bytes", false, "print bytes count\t(boolean)")
-	linesFlag := flag.Bool("l", false, "print line count\t(boolean)")
-	wordsFlag := flag.Bool("w", false, "print word count\t(boolean)")
-	charsFlag := flag.Bool("m", false, "print character count\t(boolean)")
+	for _, flag := range flags {
+		if _, ok := optionFlags[flag]; !ok {
+			// unrecognized flag, display help
+			options.Help = true
+		} else {
+			switch {
+			case optionFlags[flag] == "Bytes":
+				options.Bytes = true
+			case optionFlags[flag] == "Chars":
+				options.Chars = true
+			case optionFlags[flag] == "Words":
+				options.Words = true
+			case optionFlags[flag] == "Lines":
+				options.Lines = true
+			case optionFlags[flag] == "Help":
+				options.Help = true
+			case optionFlags[flag] == "Version":
+				options.Version = true
+			}
+		}
+	}
 
-	flag.Parse()
+	if len(flags) == 0 {
+		options.Bytes = true
+		options.Lines = true
+		options.Words = true
+	}
 
-	words, lines, chars := 0, 0, 0
-
-	file, err := os.Open(filename)
-	if err != nil {
-		fmt.Println("Error reading file: ", err)
+	if options.Help {
+		Help()
 		return
 	}
-	defer file.Close()
 
-	read := bufio.NewScanner(file)
-	for read.Scan() {
-		line := read.Text()
-		w := strings.Fields(line)
-		words += len(w)
-		chars += len(string(line))
-		lines++
-	}
-
-	wholeFile, err := os.ReadFile(filename)
-	if err != nil {
-		fmt.Println("Error reading in whole file: ", err)
+	if options.Version {
+		Version()
 		return
 	}
-	stringified := fmt.Sprintf("%s", wholeFile)
-	chars = len(stringified)
 
-	bytes := len(wholeFile)
+	total := NewFile("Total")
 
-	if *linesFlag {
-		fmt.Printf(" %d", lines)
+	for _, f := range files {
+
+		wholeFile, err := os.ReadFile(f.Name)
+		if err != nil {
+			fmt.Println("Error reading in whole file: ", err)
+			return
+		}
+
+		f.Stream = wholeFile
+		f.Bytes = len(wholeFile)
+
+		stringified := fmt.Sprintf("%s", wholeFile)
+
+		f.Chars = len([]rune(stringified))
+		f.Words = len(strings.Fields(stringified))
+		f.Lines = len(strings.Split(stringified, "\n")) - 1
+
+		if options.Lines {
+			fmt.Printf(" %d", f.Lines)
+		}
+		if options.Words {
+			fmt.Printf(" %d", f.Words)
+		}
+		if options.Bytes {
+			fmt.Printf(" %d", f.Bytes)
+		}
+		if options.Chars {
+			fmt.Printf(" %d", f.Chars)
+		}
+		fmt.Printf("\t%s\n", f.Name)
+
+		total.Bytes += f.Bytes
+		total.Chars += f.Chars
+		total.Lines += f.Lines
+		total.Words += f.Words
 	}
-	if *wordsFlag {
-		fmt.Printf(" %d", words)
+
+	if len(files) > 1 {
+		if options.Lines {
+			fmt.Printf(" %d", total.Lines)
+		}
+		if options.Words {
+			fmt.Printf(" %d", total.Words)
+		}
+		if options.Bytes {
+			fmt.Printf(" %d", total.Bytes)
+		}
+		if options.Chars {
+			fmt.Printf(" %d", total.Chars)
+		}
+		fmt.Printf("\t%s\n", total.Name)
 	}
-	if *bytesFlagA { //|| *bytesFlagB {
-		fmt.Printf(" %d", bytes)
+
+}
+
+type File struct {
+	Name   string
+	Stream []byte
+	Bytes  int
+	Words  int
+	Lines  int
+	Chars  int
+}
+
+func NewFile(f string) *File {
+	file := &File{
+		Name: f,
 	}
-	if *charsFlag {
-		fmt.Printf(" %d", chars)
-	}
-	fmt.Printf(" %s\n", filename)
+	return file
+}
+
+func Help() {
+	fmt.Println("Display help text here")
+	return
+}
+
+func Version() {
+	fmt.Println("Display version number here")
+	return
 }
